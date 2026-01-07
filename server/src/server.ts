@@ -1,7 +1,7 @@
 import express, { Express } from "express";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
-import { ClientToServerEvents, ServerToClientEvents } from "./types";
+import { ClientToServerEvents, ServerToClientEvents } from "./types/game.js";
 
 const app: Express = express();
 const httpServer = createServer(app);
