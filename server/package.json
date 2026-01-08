@@ -12,10 +12,12 @@
   "license": "ISC",
   "packageManager": "pnpm@10.20.0",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^5.2.1",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.0.3",
     "@types/socket.io": "^3.0.2",

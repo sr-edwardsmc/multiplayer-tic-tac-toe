@@ -1,20 +1,37 @@
-import express, { Express } from "express";
+import express from "express";
 import { createServer } from "http";
-import { Server as SocketIOServer } from "socket.io";
-import { ClientToServerEvents, ServerToClientEvents } from "./types/game.js";
+import cors from "cors";
+import { setupSocketIO } from "./config/sockets.js";
 
-const app: Express = express();
+const app = express();
 const httpServer = createServer(app);
 
-const socketServer = new SocketIOServer<
-  ClientToServerEvents,
-  ServerToClientEvents
->(httpServer, {
-  cors: {
-    origin: "*",
-  },
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true,
+  })
+);
+app.use(express.json());
+
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-socketServer.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
+const io = setupSocketIO(httpServer);
+
+const PORT = process.env.PORT || 3000;
+
+httpServer.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`WebSocket server ready`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
+});
+
+process.on("SIGTERM", () => {
+  console.log("SIGTERM signal received: closing HTTP server");
+  httpServer.close(() => {
+    console.log("HTTP server closed");
+    process.exit(0);
+  });
 });

@@ -25,7 +25,7 @@ export class GameManager {
     return game;
   }
 
-  joinGame(gameId: string, playerId: Player): GameState | null {
+  joinGame(gameId: string, playerId: string): GameState | null {
     const game = this.games.get(gameId);
 
     if (!game) return null;
