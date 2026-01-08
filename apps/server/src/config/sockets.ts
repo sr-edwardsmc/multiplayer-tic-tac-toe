@@ -1,13 +1,13 @@
-import type { Server as HttpServer } from "http";
-import { Socket, Server as SocketServer } from "socket.io";
-import {
+import { Server as SocketServer } from "socket.io";
+import type { Server as HTTPServer } from "http";
+import type {
   ClientToServerEvents,
   ServerToClientEvents,
   SocketData,
-} from "../types/game.js";
+} from "@tictactoe/shared";
 import { GameManager } from "../GameManager.js";
 
-function setupSocketIO(httpServer: HttpServer): SocketServer {
+export function setupSocketIO(httpServer: HTTPServer) {
   const io = new SocketServer<
     ClientToServerEvents,
     ServerToClientEvents,
@@ -22,95 +22,93 @@ function setupSocketIO(httpServer: HttpServer): SocketServer {
 
   const gameManager = new GameManager();
 
-  io.on("connection", (socket) => {
-    console.log("Player connected: ", socket.id);
+  setInterval(() => {
+    gameManager.cleanupOldGames();
+  }, 600000);
 
+  io.on("connection", (socket) => {
+    console.log(`Player connected: ${socket.id}`);
     socket.data.playerId = socket.id;
 
     socket.on("game:create", () => {
       const game = gameManager.createGame(socket.id);
       socket.data.gameId = game.id;
+      socket.data.playerSymbol = "X";
 
       socket.join(game.id);
 
-      socket.emit("game:created", game.id);
+      socket.emit("game:created", {
+        gameId: game.id,
+        yourSymbol: "X",
+      });
       socket.emit("game:updated", game);
 
-      console.log(`Game created: ${game.id} by ${socket.id}`);
+      console.log(`Game created: ${game.id}`);
     });
 
     socket.on("game:join", (gameId: string) => {
       const game = gameManager.joinGame(gameId, socket.id);
 
       if (!game) {
-        socket.emit(
-          "game:error",
-          "Could not join the game, may be full or not exist anymore"
-        );
+        socket.emit("game:error", "Could not join game");
         return;
       }
 
-      socket.data.gameId = game?.id;
+      socket.data.gameId = gameId;
+      socket.data.playerSymbol = "O";
 
       socket.join(gameId);
-      io.to(gameId).emit("game:updated", game);
 
-      console.log(`Player ${socket.id} joined game: ${gameId}`);
+      socket.emit("game:joined", {
+        game,
+        yourSymbol: "O",
+      });
+
+      io.to(gameId).emit("game:updated", game);
     });
 
     socket.on("game:move", (position: number) => {
       const gameId = socket.data.gameId;
 
       if (!gameId) {
-        socket.emit("game:error", "You are not in a game");
+        socket.emit("game:error", "Not in a game");
         return;
       }
 
       const game = gameManager.makeMove(gameId, socket.id, position);
 
       if (!game) {
-        socket.emit("game:error", "Invalid Move");
+        socket.emit("game:error", "Invalid move");
         return;
       }
 
       io.to(gameId).emit("game:updated", game);
 
-      console.log(`Move made in game ${gameId} at position ${position}`);
+      if (game.status === "finished" && game.result) {
+        const winner = game.result.winner;
+        const message =
+          winner === "draw" ? "It's a draw!" : `Player ${winner} wins!`;
+
+        io.to(gameId).emit("game:finished", {
+          winner: winner as "X" | "O" | "draw",
+          message,
+        });
+      }
     });
 
-    socket.on("game:leave", () => {
-      handlePlayerLeaving(socket);
-    });
-
-    socket.on("disconnect", () => {
-      console.log(`Player disconnected: ${socket.id}`);
-      handlePlayerLeaving(socket);
-    });
+    socket.on("game:leave", () => handlePlayerLeaving(socket));
+    socket.on("disconnect", () => handlePlayerLeaving(socket));
 
     function handlePlayerLeaving(socket: any) {
       const gameId = socket.data.gameId;
+      if (!gameId) return;
 
-      if (!gameId) {
-        return;
-      }
-
-      const success = gameManager.removePlayer(gameId, socket.id);
-
-      if (success) {
-        // Notify other player
-        socket.to(gameId).emit("game:playerLeft", "Opponent has left the game");
-
-        // Leave the room
-        socket.leave(gameId);
-
-        delete socket.data.gameId;
-
-        console.log(`Player ${socket.id} left game: ${gameId}`);
-      }
+      gameManager.removePlayer(gameId, socket.id);
+      socket.to(gameId).emit("game:playerLeft", "Opponent left");
+      socket.leave(gameId);
+      delete socket.data.gameId;
     }
   });
 
   return io;
 }
-
-export { setupSocketIO };

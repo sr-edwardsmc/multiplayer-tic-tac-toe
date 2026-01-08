@@ -1,13 +1,11 @@
-import { Board, GameResult, GameState, Player } from "./types/game.js";
+import type { Board, GameState } from "@tictactoe/shared";
+import { getGameResult, isValidPosition } from "@tictactoe/shared/utils";
 
 export class GameManager {
   private games: Map<string, GameState> = new Map();
 
-  constructor() {}
-
   createGame(playerId: string): GameState {
-    const gameId: string = this.generateGameId();
-
+    const gameId = this.generateGameId();
     const game: GameState = {
       id: gameId,
       board: Array(9).fill(null) as Board,
@@ -28,11 +26,9 @@ export class GameManager {
   joinGame(gameId: string, playerId: string): GameState | null {
     const game = this.games.get(gameId);
 
-    if (!game) return null;
-
-    if (game.status !== "waiting") return null;
-
-    if (game.players.O !== null) return null;
+    if (!game || game.status !== "waiting" || game.players.O !== null) {
+      return null;
+    }
 
     game.players.O = playerId;
     game.status = "playing";
@@ -47,39 +43,52 @@ export class GameManager {
   ): GameState | null {
     const game = this.games.get(gameId);
 
-    if (!game) return null;
+    if (!game || game.status !== "playing") {
+      return null;
+    }
 
-    if (game.status !== "playing") return null;
+    if (game.players[game.currentPlayer] !== playerId) {
+      return null;
+    }
 
-    if (game.players[game.currentPlayer] !== playerId) return null;
-
-    if (position < 0 || position > 8) return null;
-
-    if (game.board[position] !== null) return null;
+    if (!isValidPosition(position) || game.board[position] !== null) {
+      return null;
+    }
 
     // Make the move
     game.board[position] = game.currentPlayer;
 
-    const gameResult = this.checkGameResult(game.board);
+    // Check game result using shared utility
+    const result = getGameResult(game.board);
 
-    if (gameResult.winner !== null || gameResult.winner === "draw") {
+    if (result.winner !== null || result.isDraw) {
       game.status = "finished";
-      game.result = gameResult;
+      game.result = {
+        winner: result.winner,
+        winningLine: result.line,
+      };
     } else {
-      game.currentPlayer = game.currentPlayer === "X" ? "X" : "O";
+      // Switch player
+      game.currentPlayer = game.currentPlayer === "X" ? "O" : "X";
     }
 
     return game;
   }
 
+  getGame(gameId: string): GameState | undefined {
+    return this.games.get(gameId);
+  }
+
   removePlayer(gameId: string, playerId: string): boolean {
     const game = this.games.get(gameId);
 
-    if (!game) return false;
+    if (!game) {
+      return false;
+    }
 
     if (game.players.X === playerId) {
       game.players.X = null;
-    } else {
+    } else if (game.players.O === playerId) {
       game.players.O = null;
     }
 
@@ -87,9 +96,8 @@ export class GameManager {
       this.games.delete(gameId);
     } else if (game.status === "playing") {
       game.status = "finished";
-      const remainingPlayer = game.players.X || game.players.O;
       game.result = {
-        winner: remainingPlayer === "X" ? "X" : "O",
+        winner: game.players.X ? "X" : "O",
         winningLine: null,
       };
     }
@@ -97,48 +105,18 @@ export class GameManager {
     return true;
   }
 
-  private checkGameResult(board: Board): GameResult {
-    const winningLines = [
-      [0, 1, 2], // Rows
-      [3, 4, 5],
-      [6, 7, 8],
-      [0, 3, 6], // Columns
-      [1, 4, 7],
-      [2, 5, 8],
-      [0, 4, 8], // Diagonals
-      [2, 4, 6],
-    ];
-
-    for (const line of winningLines) {
-      const [a, b, c] = line;
-      const cellA = board[a];
-      const cellB = board[b];
-      const cellC = board[c];
-
-      if (cellA && cellA === cellB && cellA === cellC) {
-        return {
-          winner: cellA as Player,
-          winningLine: line,
-        };
-      }
-    }
-
-    // Check Draw
-    if (board.every((cell) => cell !== null)) {
-      return {
-        winner: "draw",
-        winningLine: null,
-      };
-    }
-
-    // Game continues
-    return {
-      winner: null,
-      winningLine: null,
-    };
-  }
-
   private generateGameId(): string {
     return Math.random().toString(36).substring(2, 9).toUpperCase();
+  }
+
+  cleanupOldGames(maxAge: number = 3600000): void {
+    const now = new Date().getTime();
+
+    for (const [gameId, game] of this.games.entries()) {
+      const age = now - game.createdAt.getTime();
+      if (age > maxAge) {
+        this.games.delete(gameId);
+      }
+    }
   }
 }

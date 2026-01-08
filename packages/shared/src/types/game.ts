@@ -24,22 +24,7 @@ export interface GameState {
   createdAt: Date;
 }
 
-export interface ServerToClientEvents {
-  "game:created": (gameId: string) => void;
-  "game:joined": (game: GameState) => void;
-  "game:updated": (game: GameState) => void;
-  "game:error": (message: string) => void;
-  "game:playerLeft": (message: string) => void;
-}
-
-export interface ClientToServerEvents {
-  "game:create": () => void;
-  "game:join": (gameId: string) => void;
-  "game:move": (position: number) => void;
-  "game:leave": () => void;
-}
-
-export interface SocketData {
-  playerId: string;
-  gameId?: string;
+export interface PlayerInfo {
+  id: string;
+  symbol: Player;
 }

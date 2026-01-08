@@ -1,11 +1,10 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2024",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
     "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "skipLibCheck": true
-  }
+    "rootDir": "./src"
+  },
+  "references": [{ "path": "../../packages/shared" }],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

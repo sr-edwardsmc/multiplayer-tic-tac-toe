@@ -1,5 +1,5 @@
 {
-  "name": "tic-tac-toe-2026",
+  "name": "@tictactoe/server",
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
@@ -8,13 +8,14 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Edward Monsalve Castrillon",
+  "license": "MIT",
   "packageManager": "pnpm@10.20.0",
   "dependencies": {
+    "@tictactoe/shared": "workspace:*",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "socket.io": "^4.8.3"
