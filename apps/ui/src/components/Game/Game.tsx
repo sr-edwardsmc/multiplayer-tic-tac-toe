@@ -1,49 +1,57 @@
-import { useEffect, useState } from "react";
-import { io, Socket } from "socket.io-client";
+import type { GameState, Player } from "@tictactoe/shared";
 
-import type { BoardStatus } from "../../types/Game";
-import Board from "../Board/Board";
+interface GameProps {
+  gameState: GameState;
+  onMove: (position: number) => void;
+  userSymbol: Player;
+}
 
-const socket: Socket = io("http://localhost:3000");
+function Game({ gameState, onMove, userSymbol }: GameProps) {
+  const isYourTurn = gameState.currentPlayer === userSymbol;
+  const isGameFinished = gameState.status === "finished";
 
-function Game() {
-  const [gameId, setGameId] = useState<string | null>();
-  const [boardState, setBoardState] = useState<BoardStatus>(
-    Array(9).fill(null)
-  );
-  const [gameStatus, setGameStatus] = useState<string>("");
+  const handleCellClick = (position: number) => {
+    if (!isYourTurn || isGameFinished || gameState.board[position] !== null) {
+      return;
+    }
 
-  useEffect(() => {
-    socket.on("game:created", (gameId: string) => {
-      setGameId(gameId);
-    });
-  }, []);
-
-  const handleCreateGame = () => {
-    socket.emit("game:create");
+    onMove(position);
   };
 
-  const handleCellClick = (selectedIndex: number) => {};
-
-  const handleRestartGame = () => {
-    setBoardState(Array(9).fill(null));
+  const isCellInWinningLine = (position: number) => {
+    if (gameState.result?.winningLine) return false;
+    return gameState.result?.winningLine?.includes(position);
   };
 
   return (
-    <section className="game">
-      {gameId && <h2 className="game-status">{gameStatus}</h2>}
-      {!gameId && <button onClick={handleCreateGame}>Create new game</button>}
-      {gameId && (
-        <>
-          <section className="game-board">
-            <Board squares={boardState} handleCellClick={handleCellClick} />
-          </section>
-          <section className="board-actions">
-            <button onClick={handleRestartGame}>Restart Game</button>
-          </section>
-        </>
+    <div className="game-board">
+      <div className="player-info">
+        <p>You are: {userSymbol}</p>
+        <p>Current turn: {gameState.currentPlayer}</p>
+        <p>Status: {isYourTurn ? "Your turn!" : "Opponent's turn"}</p>
+      </div>
+
+      <div className="board-grid">
+        {gameState.board.map((cell, index) => (
+          <button
+            key={index}
+            className={`cell ${isCellInWinningLine(index) ? "winning" : ""}`}
+            onClick={() => handleCellClick(index)}
+            disabled={!isYourTurn || isGameFinished || cell !== null}
+          >
+            {cell || ""}
+          </button>
+        ))}
+      </div>
+
+      {isGameFinished && gameState.result && (
+        <div className="game-result">
+          {gameState.result.winner === "draw"
+            ? "It's a draw!"
+            : `Player ${gameState.result.winner} wins!`}
+        </div>
       )}
-    </section>
+    </div>
   );
 }
 

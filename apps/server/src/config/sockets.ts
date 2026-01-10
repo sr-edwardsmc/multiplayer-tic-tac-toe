@@ -39,7 +39,7 @@ export function setupSocketIO(httpServer: HTTPServer) {
 
       socket.emit("game:created", {
         gameId: game.id,
-        yourSymbol: "X",
+        userSymbol: "X",
       });
       socket.emit("game:updated", game);
 
@@ -61,7 +61,7 @@ export function setupSocketIO(httpServer: HTTPServer) {
 
       socket.emit("game:joined", {
         game,
-        yourSymbol: "O",
+        userSymbol: "O",
       });
 
       io.to(gameId).emit("game:updated", game);

@@ -8,8 +8,8 @@ export interface ClientToServerEvents {
 }
 
 export interface ServerToClientEvents {
-  "game:created": (data: { gameId: string; yourSymbol: "X" | "O" }) => void;
-  "game:joined": (data: { game: GameState; yourSymbol: "X" | "O" }) => void;
+  "game:created": (data: { gameId: string; userSymbol: "X" | "O" }) => void;
+  "game:joined": (data: { game: GameState; userSymbol: "X" | "O" }) => void;
   "game:updated": (game: GameState) => void;
   "game:error": (message: string) => void;
   "game:playerLeft": (message: string) => void;
